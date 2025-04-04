@@ -1,4 +1,5 @@
 import argparse
+import io
 import os
 import pathlib
 import time
@@ -7,10 +8,11 @@ from typing import NoReturn
 import soundfile
 import torch
 import librosa
+from werkzeug.datastructures import FileStorage
 
 from bytesep.models.lightning_modules import get_model_class
 from bytesep.utils import read_yaml
-from bytesep.separate import separate_file, separate_dir
+from bytesep.separate import separate_file, separate_dir, separate_uploaded_file
 
 LOCAL_CHECKPOINTS_DIR = os.path.join(pathlib.Path.home(), "bytesep_data")
 
@@ -111,6 +113,7 @@ def get_paths(source_type: str, model_type: str) -> [str, str]:
                 local_checkpoints_dir,
                 "resunet143_subbtandtime_vocals_8.7dB_500k_steps_v2.pth",
             )
+            print(os.path.getsize(checkpoint_path))
             assert os.path.getsize(checkpoint_path) == 414046363, error_message
 
         elif source_type == "accompaniment":
@@ -124,7 +127,7 @@ def get_paths(source_type: str, model_type: str) -> [str, str]:
                 local_checkpoints_dir,
                 "resunet143_subbtandtime_accompaniment_16.4dB_500k_steps_v2.pth",
             )
-            assert os.path.getsize(checkpoint_path) == 414046363, error_message
+            assert os.path.getsize(checkpoint_path) == 414036369, error_message
 
         else:
             raise NotImplementedError
@@ -140,7 +143,7 @@ class Namespace:
         self.__dict__.update(kwargs)
 
 
-def separate(args) -> NoReturn:
+def separate(args):
     r"""Separate an audio file or audio files and write out to a file or directory.
 
     Args:
@@ -151,17 +154,27 @@ def separate(args) -> NoReturn:
         scale_volume: bool, set this flag to scale separated audios to maximum value of 1.
         cpu: set this flag to use CPU.
     """
-
-    source_type = args.source_type
-    model_type = args.model_type
-    audio_path = args.audio_path
-    output_path = args.output_path
-    scale_volume = args.scale_volume
-    cpu = args.cpu
+    source_type = args["source_type"]
+    model_type = args["model_type"]
+    audio_path = args["audio_path"]
+    output_path = args["output_path"]
+    scale_volume = args["scale_volume"]
+    cpu = args["cpu"]
 
     config_yaml, checkpoint_path = get_paths(source_type, model_type)
+    print(isinstance(audio_path, FileStorage))
+    if isinstance(audio_path, FileStorage):
+        args = Namespace(
+            config_yaml=config_yaml,
+            checkpoint_path=checkpoint_path,
+            audio=audio_path,
+            output_path=output_path,
+            scale_volume=scale_volume,
+            cpu=cpu,
+        )
+        return separate_uploaded_file(args)
 
-    if os.path.isfile(audio_path):
+    elif os.path.isfile(audio_path):
 
         args = Namespace(
             config_yaml=config_yaml,
@@ -190,9 +203,67 @@ def separate(args) -> NoReturn:
     else:
         raise Exception("File or directory does not exist!")
 
+def main(mode, scale_volume, source_type, audio_path, output_path, cpu):
+    # parser = argparse.ArgumentParser()
+    # subparsers = parser.add_subparsers(dest="mode")
+    #
+    # parser_download_checkpoints = subparsers.add_parser("download-checkpoints")
+    #
+    # parser_separate = subparsers.add_parser("separate")
+    # parser_separate.add_argument(
+    #     "--source_type", type=str, default="vocals", choices=["vocals", "accompaniment"]
+    # )
+    # parser_separate.add_argument(
+    #     "--model_type",
+    #     type=str,
+    #     default="ResUNet143_Subbandtime",
+    #     choices=["ResUNet143_Subbandtime", "MobileNet_Subbandtime"],
+    # )
+    # parser_separate.add_argument(
+    #     "--audio_path",
+    #     type=str,
+    #     required=True,
+    #     help="The path or directory of audio(s) to be separated.",
+    # )
+    # parser_separate.add_argument(
+    #     "--output_path",
+    #     type=str,
+    #     required=True,
+    #     help="The path or directory to write out separated audio(s).",
+    # )
+    # parser_separate.add_argument(
+    #     '--scale_volume',
+    #     action='store_true',
+    #     default=False,
+    #     help="Set this flag to scale separated audios to maximum value of 1.",
+    # )
+    # parser_separate.add_argument(
+    #     '--cpu',
+    #     action='store_true',
+    #     default=False,
+    #     help="Set this flag to use CPU.",
+    # )
+
+    param = {
+        "mode": mode,
+        "scale_volume": scale_volume,
+        "model_type": "ResUNet143_Subbandtime",
+        "source_type": source_type,
+        "audio_path": audio_path,
+        "output_path": output_path,
+        "cpu": cpu
+    }
+
+    if param["mode"] == "download-checkpoints":
+        download_checkpoints(param)
+
+    elif param["mode"] == "separate":
+        return separate(param)
+
+    else:
+        raise NotImplementedError
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="mode")
 

@@ -1,4 +1,5 @@
 import datetime
+import io
 import logging
 import os
 import pickle
@@ -7,6 +8,7 @@ from typing import Dict, NoReturn
 import librosa
 import numpy as np
 import yaml
+from werkzeug.datastructures import FileStorage
 
 
 def create_logging(log_dir: str, filemode: str) -> logging:
@@ -43,6 +45,24 @@ def create_logging(log_dir: str, filemode: str) -> logging:
 
     return logging
 
+def load_uploaded_audio(
+    uploaded_audio: FileStorage,
+    mono: bool,
+    sample_rate: float,
+    offset: float = 0.0,
+    duration: float = None,
+) -> np.array:
+    audio_obj = io.BytesIO(uploaded_audio.read())
+    audio, _ = librosa.core.load(
+        audio_obj, sr=sample_rate, mono=mono, offset=offset, duration=duration
+    )
+    # (audio_samples,) | (channels_num, audio_samples)
+    print(audio, "loading done")
+    if audio.ndim == 1:
+        audio = audio[None, :]
+        # (1, audio_samples,)
+
+    return audio
 
 def load_audio(
     audio_path: str,

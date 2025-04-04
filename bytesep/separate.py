@@ -1,4 +1,5 @@
 import argparse
+import io
 import os
 import pathlib
 import time
@@ -10,7 +11,7 @@ import torch
 
 from bytesep.models.lightning_modules import get_model_class
 from bytesep.separator import Separator
-from bytesep.utils import load_audio, read_yaml
+from bytesep.utils import load_audio, load_uploaded_audio, read_yaml
 
 
 def init_abn() -> NoReturn:
@@ -107,6 +108,59 @@ def match_audio_channels(audio: np.array, input_channels: int) -> np.array:
     else:
         raise NotImplementedError
 
+def separate_uploaded_file(args) -> NoReturn:
+    config_yaml = args.config_yaml
+    checkpoint_path = args.checkpoint_path
+    uploaded_audio = args.audio
+    output_path = args.output_path
+    scale_volume = args.scale_volume
+    cpu = args.cpu
+
+    if cpu or not torch.cuda.is_available():
+        device = torch.device('cpu')
+    else:
+        device = torch.device('cuda')
+
+    # Read yaml files.
+    configs = read_yaml(config_yaml)
+    sample_rate = configs['train']['sample_rate']
+    input_channels = configs['train']['input_channels']
+
+    # Build Separator.
+    separator = build_separator(config_yaml, checkpoint_path, device)
+
+    # paths
+    if os.path.dirname(output_path) != "":
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    print("Audio file to load:", uploaded_audio)
+    # Load audio.
+    audio = load_uploaded_audio(uploaded_audio=uploaded_audio, mono=False, sample_rate=sample_rate)
+    # audio: (input_channels, audio_samples)
+
+    audio = match_audio_channels(audio, input_channels)
+    # audio: (input_channels, audio_samples)
+
+    input_dict = {'waveform': audio}
+
+    # Separate
+    separate_time = time.time()
+
+    sep_audio = separator.separate(input_dict)
+    # (input_channels, audio_samples)
+
+    print('Separate time: {:.3f} s'.format(time.time() - separate_time))
+
+    # Write out separated audio.
+    if scale_volume:
+        sep_audio /= np.max(np.abs(sep_audio))
+
+    buffer = io.BytesIO()
+    soundfile.write(buffer, data=sep_audio.T, samplerate=sample_rate, format="WAV")
+    print("sep_audio", sep_audio)
+    print("buffer", buffer)
+    buffer.seek(0)
+
+    return buffer
 
 def separate_file(args) -> NoReturn:
     r"""Separate a single file.
@@ -147,7 +201,6 @@ def separate_file(args) -> NoReturn:
     # paths
     if os.path.dirname(output_path) != "":
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
-
     # Load audio.
     audio = load_audio(audio_path=audio_path, mono=False, sample_rate=sample_rate)
     # audio: (input_channels, audio_samples)
