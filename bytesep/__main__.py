@@ -14,8 +14,8 @@ from bytesep.models.lightning_modules import get_model_class
 from bytesep.utils import read_yaml
 from bytesep.separate import separate_file, separate_dir, separate_uploaded_file
 
-LOCAL_CHECKPOINTS_DIR = os.path.join(pathlib.Path.home(), "bytesep_data")
-
+# LOCAL_CHECKPOINTS_DIR = os.path.join(pathlib.Path.home(), "bytesep_data")
+LOCAL_CHECKPOINTS_DIR = "../check_points/bytesep_data"
 
 def download_checkpoints(args) -> NoReturn:
     r"""Download checkpoints and config yaml files from Zenodo."""

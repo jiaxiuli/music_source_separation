@@ -45,8 +45,8 @@ class PQMF(nn.Module):
             1, out_channels=N, kernel_size=M, stride=N, bias=False
         )
 
-        filters_dir = '{}/bytesep_data/filters'.format(str(pathlib.Path.home()))
-
+        # filters_dir = '{}/bytesep_data/filters'.format(str(pathlib.Path.home()))
+        filters_dir = '../../../check_points/bytesep_data/filters'
         for _name in ['f_4_64.mat', 'h_4_64.mat']:
 
             _path = os.path.join(filters_dir, _name)

@@ -16,9 +16,12 @@ app = Flask(__name__)
 #     spec.loader.exec_module(module)
 #
 #     return module.main  # 确保 __main__.py 里有 main(mode)
+@app.route('/')
+def index():
+    return 'Hello from Flask on AWS Lambda!'
 
-@app.route("/run-main", methods=["POST"])
-def run_main():
+@app.route("/separate_from_audio_file", methods=["POST"])
+def separate_from_audio_file():
     """
     处理 POST 请求，调用 main(mode) 并返回结果
     """
