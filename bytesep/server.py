@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify, send_file
 # import importlib.util
 # import os
 import sys
-print(sys.path)
 sys.path.insert(0, '/home/ubuntu/code/music_source_separation')
 
 from bytesep.__main__ import main
