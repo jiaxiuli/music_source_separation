@@ -2,7 +2,9 @@ from flask import Flask, request, jsonify, send_file
 # import importlib.util
 # import os
 from bytesep.__main__ import main
-
+import sys
+print(sys.path)
+sys.path.insert(0, '/home/ubuntu/code/music_source_separation/bytesep')
 app = Flask(__name__)
 #
 # def load_main_function():
