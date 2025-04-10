@@ -42,4 +42,7 @@ def separate_from_audio_file():
     # return jsonify({"result": result})  # 返回 JSON 结果
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    try:
+        app.run(host="0.0.0.0", port=5000, debug=True)
+    except Exception as e:
+        print(f"发生异常：{e}")
